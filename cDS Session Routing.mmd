@@ -1,0 +1,50 @@
+sequenceDiagram
+  participant C as cDS Client
+  participant P as Player
+  participant NA as Node A
+  participant NB as Node B
+  participant TC as cDS TC
+  participant CS as Content Steering Servers
+  participant TE as cDS Telemetry
+
+  autonumber
+  P ->> NA: request master playlist
+  NA ->> P: return master playlist
+  P ->> CS: request steering manifest
+  CS ->> P: priority list [Node B, Node A, cDS::TC]
+  loop 
+    P ->> NB: request variant playlists
+    NB ->> P: return variant playlists
+    P ->> NB: request video segments
+    NB ->> P: return video segments
+  end
+  break when download fail/timeout
+    alt [either Node B failure report from Client or detect by cDS::Telemetry]
+      C -->> TE: report Node B fail
+    else
+      NB ->> TE: detect Node B fail
+    end
+    TE ->> CS: remove Node B from steering manifest
+    loop 
+      P ->> NA: request variant playlist
+      NA ->> P: return variant playlist
+      P ->> NA: request video segments
+      NA ->> P: return video segments
+    end
+  end
+  break when download fail/timeout
+    alt [either Node A failure report from Client or detect by cDS::Telemetry]
+      C -->> TE: report Node A fail
+    else
+      NA ->> TE: detect Node A fail
+    end
+    TE ->> CS: remove Node A from steering manifest
+    loop 
+      P ->> TC: request variant playlists
+      TC ->> P: return variant playlists
+      P ->> TC: request video segments
+      TC ->> P: return video segments
+    end
+  end
+
+
