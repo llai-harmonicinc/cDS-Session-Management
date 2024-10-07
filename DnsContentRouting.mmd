@@ -1,0 +1,60 @@
+sequenceDiagram
+    participant P as Player
+    participant RecursiveDNS
+    participant TrafficRouter
+    participant EdgeServer1
+    participant EdgeServer2
+    participant TrafficMonitor
+
+autonumber
+    Note over P: Player requests DNS resolution for the CDN domain
+    P->>+RecursiveDNS: DNS Query for cdn.example.com
+
+    Note over RecursiveDNS: Recursive DNS resolver forwards query to authoritative DNS (Traffic Router)
+    RecursiveDNS->>+TrafficRouter: DNS Query for cdn.example.com
+    
+    Note over TrafficRouter: Traffic Router checks the available edge servers and their health
+    TrafficRouter->>TrafficMonitor: Request server health info
+    TrafficMonitor-->>TrafficRouter: EdgeServer1: Healthy, EdgeServer2: Healthy
+
+    TrafficRouter->>+EdgeServer1: Health check (EdgeServer1)
+    TrafficRouter->>+EdgeServer2: Health check (EdgeServer2)
+
+    Note over TrafficRouter: Traffic Router selects the best edge server based on proximity, health, and load
+    TrafficRouter-->>-RecursiveDNS: DNS Response (IP of EdgeServer1)
+
+    Note over RecursiveDNS: Recursive DNS sends the resolved IP to the client
+    RecursiveDNS-->>-P: DNS Response (IP of EdgeServer1)
+
+    Note over P: Player sends HTTP request to EdgeServer1
+    P->>+EdgeServer1: GET /video.mp4
+
+    break
+    Note over EdgeServer1: EdgeServer1 suddenly goes offline
+    EdgeServer1--xTrafficMonitor: Server down!
+    EdgeServer1-->P: ETIMEDOUT
+    end
+    TrafficMonitor-->>TrafficRouter: EdgeServer1: Unhealthy
+    
+    Note over TrafficRouter: Traffic Router receives updated health status from Traffic Monitor
+    TrafficRouter->>TrafficMonitor: Request updated health info
+    TrafficMonitor-->>TrafficRouter: EdgeServer1: Unhealthy, EdgeServer2: Healthy
+
+    Note over TrafficRouter: Traffic Router removes EdgeServer1 from routing pool and selects EdgeServer2
+    TrafficRouter->>RecursiveDNS: DNS Response (IP of EdgeServer2)
+
+    loop 
+        Note over P: Player retry while DNS record is not expired
+        P->>+EdgeServer1: GET /video.mp4
+        EdgeServer1-->P: ETIMEDOUT
+    end
+    Note over P: DNS resolution expire and Player retries DNS resolution after EdgeServer1 failure
+    P->>+RecursiveDNS: DNS Query for cdn.example.com (retry)
+
+    RecursiveDNS->>+TrafficRouter: DNS Query for cdn.example.com (retry)
+    TrafficRouter-->>-RecursiveDNS: DNS Response (IP of EdgeServer2)
+    RecursiveDNS-->>-P: DNS Response (IP of EdgeServer2)
+
+    Note over P: Player sends HTTP request to EdgeServer2
+    P->>+EdgeServer2: GET /video.mp4 (retry request)
+    EdgeServer2-->>P: 200 OK\n(video.mp4)
