@@ -1,0 +1,49 @@
+sequenceDiagram
+    participant P as Player
+    participant TrafficRouter (HTTP)
+    participant TrafficMonitor
+    participant EdgeServer1
+    participant EdgeServer2
+
+autonumber
+    Note over P: Player sends HTTP request to Traffic Router
+    P->>+TrafficRouter (HTTP): GET /video.mp4
+
+    Note over TrafficRouter (HTTP): Traffic Router queries Traffic Monitor for real-time edge server health
+    TrafficRouter (HTTP)->>+TrafficMonitor: Request health info for EdgeServer1, EdgeServer2
+    TrafficMonitor-->>-TrafficRouter (HTTP): EdgeServer1: Healthy, EdgeServer2: Healthy
+
+    Note over TrafficRouter (HTTP): Traffic Router selects EdgeServer1 based on proximity, health, and load
+    TrafficRouter (HTTP)-->>P: 302 Found\nLocation: https://edge1.cdn.example.com/video.mp4
+
+    Note over P: Player follows redirect and sends HTTP request to EdgeServer1
+    P->>+EdgeServer1: GET /video.mp4
+
+    Note over EdgeServer1: EdgeServer1 begins sending video content to the client
+    EdgeServer1-->>P: 200 OK\n(video.mp4)
+
+    Note over EdgeServer1: EdgeServer1 suddenly goes offline
+    EdgeServer1--xTrafficMonitor: Edge Server 1 down!
+    TrafficMonitor-->>TrafficRouter (HTTP): EdgeServer1: Unhealthy
+
+    Note over TrafficRouter (HTTP): Traffic Router receives updated health status and removes EdgeServer1 from routing pool
+
+    Note over P: Player tries to reconnect to EdgeServer1 but it fails
+    P->>+EdgeServer1: GET /video.mp4 (retry)
+    EdgeServer1--xP: No response (timeout)
+
+    Note over P: Player retries the original request with Traffic Router
+    P->>+TrafficRouter (HTTP): GET /video.mp4 (retry)
+
+    Note over TrafficRouter (HTTP): Traffic Router queries Traffic Monitor for updated health status
+    TrafficRouter (HTTP)->>+TrafficMonitor: Request updated health info
+    TrafficMonitor-->>-TrafficRouter (HTTP): EdgeServer1: Unhealthy, EdgeServer2: Healthy
+
+    Note over TrafficRouter (HTTP): Traffic Router selects EdgeServer2 as the next best candidate
+    TrafficRouter (HTTP)-->>P: 302 Found\nLocation: https://edge2.cdn.example.com/video.mp4
+
+    Note over P: Player follows redirect and sends HTTP request to EdgeServer2
+    P->>+EdgeServer2: GET /video.mp4
+
+    Note over EdgeServer2: EdgeServer2 responds with the requested content
+    EdgeServer2-->>P: 200 OK\n(video.mp4)
