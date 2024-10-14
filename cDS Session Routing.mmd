@@ -5,10 +5,10 @@ participant LD as DNS resolver
 participant AD as Authoritative DNS server
 
 participant SM as cDS::Session Management
-participant sNA as cDS::Node A
-participant sNB as cDS::Node B
-participant TC as cDS TC
-participant NA as cDS::Node C
+participant sNA as cDS::Node-A
+participant sNB as cDS::Node-B
+participant TC as cDS::TC
+participant NA as cDS::Node-C
 participant CS as cDS::Content Steering Servers
 participant TE as cDS::Telemetry
 
@@ -25,7 +25,7 @@ autonumber
     %% request master manifest from Session Management server
     Note over P, SM: request master manifest from cDS::Session Management
     P->>SM: GET /master manifest
-    Note over P, SM: #35;EXTM3U<br/> #35;EXT-X-VERSION:3<br>#35;EXT-X-CONTENT-STEERING:SERVER-URI="https://cs.harmonic.com/"<br>#35;EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2297761,RESOLUTION=960x540,FRAME-RATE=30.000,PATHWAY-ID="Node-A"<br>https://nodeA.harmonic.com/01.m3u8<br>#35;EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2297761,RESOLUTION=960x540,FRAME-RATE=30.000,PATHWAY-ID="Node-B"<br>http://nodeB.harmonic.com/01.m3u8<br>#35;EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2297761,RESOLUTION=960x540,FRAME-RATE=30.000,PATHWAY-ID="CDN-C"<br>https://tc.harmonic.com/01.m3u8.....
+    Note over P, SM: #35;EXTM3U<br/> #35;EXT-X-VERSION:3<br>#35;EXT-X-CONTENT-STEERING:SERVER-URI="https://cs.harmonic.com/"<br>#35;EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2297761,RESOLUTION=960x540,FRAME-RATE=30.000,PATHWAY-ID="cDS::Node-A"<br>https://nodeA.harmonic.com/01.m3u8<br>#35;EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2297761,RESOLUTION=960x540,FRAME-RATE=30.000,PATHWAY-ID="cDS::Node-B"<br>http://nodeB.harmonic.com/01.m3u8<br>#35;EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2297761,RESOLUTION=960x540,FRAME-RATE=30.000,PATHWAY-ID="cDS::TC"<br>https://tc.harmonic.com/01.m3u8.....
     SM->>P: 200 OK\n(master manifest) 
     
     %% request steering manifest from Content Steering server
@@ -36,7 +36,7 @@ autonumber
     LD->>P: cDS::Content Steering Server IP
 
     P->>CS: GET /steering manifest
-    Note over CS, P: {<br>"VERSION": 1,<br>"TTL": 300,<br>"PATHWAY-PRIORITY: ["cDS::Node A", "cDS::Node B", "cDS::TC"]<br>}
+    Note over CS, P: {<br>"VERSION": 1,<br>"TTL": 300,<br>"PATHWAY-PRIORITY: ["cDS::Node-A", "cDS::Node-B", "cDS::TC"]<br>}
     CS->>P: 200 OK\n(steering manifest)
     
     Note over P, sNA: request variant manifest from cDS::Node A
